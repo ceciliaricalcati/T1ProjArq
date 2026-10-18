@@ -1,0 +1,20 @@
+package br.edu.voo.domain.validacao;
+
+/** Códigos estáveis de violação: o cliente da API e os testes dependem deles, não do texto. */
+public enum CodigoViolacao {
+    SEM_TRECHOS,
+    ORIGEM_INCOERENTE,
+    DESTINO_INCOERENTE,
+    PERCURSO_DESCONTINUO,
+    POUSO_FINAL_OBRIGATORIO,
+    PARTIDA_INCOERENTE,
+    HORARIO_INCOERENTE,
+    VOO_EM_DIAS_DIFERENTES,
+    ALTITUDE_INVALIDA,
+    ALTITUDE_NAO_PERMITIDA_PARA_CATEGORIA,
+    HORARIO_NAO_PERMITIDO_PARA_CATEGORIA,
+    AUTONOMIA_INSUFICIENTE,
+    ALTITUDE_OCUPADA,
+    VAGA_INEXISTENTE,
+    VAGA_OCUPADA
+}
