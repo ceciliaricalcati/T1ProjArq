@@ -1,0 +1,165 @@
+classDiagram
+    class Aeroporto {
+        <<record>>
+        +String codigo
+        +String nome
+        +int quantidadeVagas
+    }
+    class Aerovia {
+        <<record>>
+        +String id
+        +int distanciaKm
+    }
+    class Piloto {
+        <<record>>
+        +Long id
+        +String nome
+    }
+    class Aeronave {
+        <<abstract>>
+        +String prefixo
+        +int velocidadeCruzeiroKmh
+        +int autonomiaKm
+        +duracaoDe(Aerovia) Duration
+        +limiteSemReabastecerKm() double
+        +excedeAutonomia(int) boolean
+        +regraOperacao() RegraOperacao
+    }
+    class Particular {
+        +String empresaManutencao
+    }
+    class ComercialPassageiros {
+        +String companhia
+        +int capacidadePassageiros
+    }
+    class ComercialCarga {
+        +String companhia
+        +double capacidadeCargaToneladas
+    }
+    class RegraOperacao {
+        <<interface>>
+        +verificar(int, int, Intervalo) List~Violacao~
+    }
+    class RegraParticular
+    class RegraPassageiros
+    class RegraCarga
+
+    class PlanoDeVoo {
+        <<agregado>>
+        +Long id
+        +LocalDateTime partida
+        +StatusPlano status
+        +alterarPartida(LocalDateTime)
+        +definirPercurso(List~Trecho~)
+        +cronograma() List~TrechoCalculado~
+        +aprovar()
+        +cancelar(LocalDateTime)
+        +abandonar()
+    }
+    class StatusPlano {
+        <<enumeration>>
+        EM_EDICAO
+        APROVADO
+        CANCELADO
+        ABANDONADO
+    }
+    class Trecho {
+        <<record>>
+        +int altitudePes
+        +LocalDateTime entrada
+    }
+    class AcaoNoAeroporto {
+        <<sealed interface>>
+    }
+    class Sobrevoo {
+        <<record>>
+    }
+    class Pouso {
+        <<record>>
+        +int vaga
+        +int permanenciaMin
+    }
+    class TrechoCalculado {
+        <<record>>
+        +int ordem
+        +LocalDateTime chegada
+        +ocupacaoAerovia() Intervalo
+        +permanencia() Optional~Intervalo~
+        +saidaEsperada() LocalDateTime
+    }
+    class Slot {
+        <<value object>>
+        +LocalDateTime inicio
+    }
+    class Intervalo {
+        <<record>>
+        +LocalDateTime inicio
+        +LocalDateTime fim
+    }
+    class CalculadoraDeSlots {
+        +slotsDe(Intervalo)$ List~Slot~
+    }
+    class ConsultaDeOcupacao {
+        <<porta>>
+        +altitudeOcupada(String, int, Slot) boolean
+        +vagaOcupada(String, int, Slot) boolean
+    }
+    class Validador {
+        <<interface>>
+        +validar(PlanoDeVoo) List~Violacao~
+    }
+    class ValidadorDePlano {
+        +validar(PlanoDeVoo) ResultadoValidacao
+    }
+    class ValidadorDePercurso
+    class ValidadorDeHorarios
+    class ValidadorDeAeronave
+    class ValidadorDeAutonomia
+    class ValidadorDeDisponibilidade
+    class Violacao {
+        <<record>>
+        +CodigoViolacao codigo
+        +String mensagem
+        +Integer ordemTrecho
+    }
+    class ResultadoValidacao {
+        <<record>>
+        +valido() boolean
+    }
+
+    Aerovia --> Aeroporto : origem
+    Aerovia --> Aeroporto : destino
+    Aeronave <|-- Particular
+    Aeronave <|-- ComercialPassageiros
+    Aeronave <|-- ComercialCarga
+    Aeronave ..> RegraOperacao : fornece
+    RegraOperacao <|.. RegraParticular
+    RegraOperacao <|.. RegraPassageiros
+    RegraOperacao <|.. RegraCarga
+
+    PlanoDeVoo --> Piloto
+    PlanoDeVoo --> Aeronave
+    PlanoDeVoo --> Aeroporto : origem e destino
+    PlanoDeVoo --> StatusPlano
+    PlanoDeVoo "1" *-- "0..*" Trecho : ordenados
+    Trecho --> Aerovia
+    Trecho --> AcaoNoAeroporto
+    AcaoNoAeroporto <|.. Sobrevoo
+    AcaoNoAeroporto <|.. Pouso
+    PlanoDeVoo ..> TrechoCalculado : cronograma
+    TrechoCalculado --> Trecho
+    TrechoCalculado ..> Intervalo
+    CalculadoraDeSlots ..> Intervalo
+    CalculadoraDeSlots ..> Slot : gera
+    RegraOperacao ..> Intervalo
+
+    Validador <|.. ValidadorDePercurso
+    Validador <|.. ValidadorDeHorarios
+    Validador <|.. ValidadorDeAeronave
+    Validador <|.. ValidadorDeAutonomia
+    Validador <|.. ValidadorDeDisponibilidade
+    ValidadorDePlano o-- "1..*" Validador
+    ValidadorDePlano ..> ResultadoValidacao
+    ResultadoValidacao o-- "0..*" Violacao
+    ValidadorDeDisponibilidade ..> ConsultaDeOcupacao
+    ValidadorDeDisponibilidade ..> CalculadoraDeSlots

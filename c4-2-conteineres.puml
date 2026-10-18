@@ -1,0 +1,16 @@
+@startuml c4-2-conteineres
+!include <C4/C4_Container>
+
+title C4 Nível 2: Contêineres
+
+Person(operador, "Operador / Cliente da API", "Usa uma ferramenta HTTP para chamar a API")
+
+System_Boundary(sistema, "Sistema de Gestão de Planos de Voo") {
+    Container(api, "API Backend", "Java 21, Spring Boot 3.4", "Expõe a API REST (com OpenAPI/Swagger UI), aplica as regras de negócio, orquestra transações de aprovação e cancelamento e executa a carga inicial de dados.")
+    ContainerDb(banco, "Banco de dados", "H2 em arquivo", "Persiste rede aérea, pilotos, aeronaves, planos, trechos e reservas. Mantém cadastros/planos em payload JSON e reservas em tabela própria. Esquema gerenciado pelo Hibernate.")
+}
+
+Rel(operador, api, "Chama os endpoints", "HTTP/JSON")
+Rel(api, banco, "Lê e grava dados em transações", "JDBC")
+
+@enduml

@@ -1,0 +1,15 @@
+@startuml c4-1-contexto
+!include <C4/C4_Context>
+
+title C4 Nível 1: Contexto do Sistema de Gestão de Planos de Voo
+
+Person(operador, "Operador / Cliente da API", "Cria, valida, aprova, cancela e consulta planos de voo; cadastra rede aérea, pilotos e aeronaves. Na apresentação, o professor e a equipe usam uma ferramenta HTTP.")
+
+System(sistema, "Sistema de Gestão de Planos de Voo", "Backend que mantém aeroportos, aerovias, pilotos, aeronaves e planos de voo, valida percursos, horários, restrições da aeronave e autonomia, e controla a ocupação de aerovias e vagas.")
+
+System_Ext(ferramenta, "Ferramenta de requisições HTTP", "Swagger UI, curl, Postman ou equivalente. Não faz parte do escopo de implementação.")
+
+Rel(operador, ferramenta, "Usa")
+Rel(ferramenta, sistema, "Envia requisições e recebe respostas", "HTTP/JSON (API REST)")
+
+@enduml
