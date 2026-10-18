@@ -1,0 +1,189 @@
+@startuml uml-dominio
+title Modelo de domínio (UML)
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "rede" {
+  class Aeroporto <<record>> {
+    codigo : String
+    nome : String
+    quantidadeVagas : int
+  }
+  class Aerovia <<record>> {
+    id : String
+    distanciaKm : int
+  }
+}
+
+package "piloto" {
+  class Piloto <<record>> {
+    id : Long
+    nome : String
+  }
+}
+
+package "frota" {
+  abstract class Aeronave {
+    prefixo : String
+    velocidadeCruzeiroKmh : int
+    autonomiaKm : int
+    duracaoDe(Aerovia) : Duration
+    limiteSemReabastecerKm() : double
+    excedeAutonomia(int) : boolean
+    {abstract} regraOperacao() : RegraOperacao
+  }
+  class Particular {
+    empresaManutencao : String
+  }
+  class ComercialPassageiros {
+    companhia : String
+    capacidadePassageiros : int
+  }
+  class ComercialCarga {
+    companhia : String
+    capacidadeCargaToneladas : double
+  }
+  interface RegraOperacao <<Strategy>> {
+    verificar(ordemTrecho, altitudePes, Intervalo) : List<Violacao>
+  }
+  class RegraParticular
+  class RegraPassageiros
+  class RegraCarga
+}
+
+package "plano" {
+  class PlanoDeVoo <<agregado>> {
+    id : Long
+    partida : LocalDateTime
+    status : StatusPlano
+    alterarPartida(LocalDateTime)
+    definirPercurso(List<Trecho>)
+    cronograma() : List<TrechoCalculado>
+    aprovar()
+    cancelar(agora : LocalDateTime)
+    abandonar()
+  }
+  enum StatusPlano {
+    EM_EDICAO
+    APROVADO
+    CANCELADO
+    ABANDONADO
+  }
+  class Trecho <<record>> {
+    altitudePes : int
+    entrada : LocalDateTime
+  }
+  interface AcaoNoAeroporto <<sealed>>
+  class Sobrevoo <<record>>
+  class Pouso <<record>> {
+    vaga : int
+    permanenciaMin : int
+  }
+  class TrechoCalculado <<record>> {
+    ordem : int
+    chegada : LocalDateTime
+    ocupacaoAerovia() : Intervalo
+    permanencia() : Optional<Intervalo>
+    saidaEsperada() : LocalDateTime
+  }
+  class FaixaDeAltitude {
+    MINIMA = 25000
+    MAXIMA = 35000
+    PASSO = 1000
+  }
+}
+
+package "reserva" {
+  class Slot <<value object>> {
+    inicio : LocalDateTime
+  }
+  class Intervalo <<record>> {
+    inicio : LocalDateTime
+    fim : LocalDateTime
+  }
+  class CalculadoraDeSlots {
+    {static} slotsDe(Intervalo) : List<Slot>
+  }
+  interface ConsultaDeOcupacao <<porta>> {
+    altitudeOcupada(aeroviaId, altitudePes, Slot) : boolean
+    vagaOcupada(codigoAeroporto, vaga, Slot) : boolean
+  }
+}
+
+package "validacao" {
+  interface Validador {
+    validar(PlanoDeVoo) : List<Violacao>
+  }
+  class ValidadorDePlano {
+    padrao(ConsultaDeOcupacao) : ValidadorDePlano
+    validar(PlanoDeVoo) : ResultadoValidacao
+  }
+  class ValidadorDePercurso
+  class ValidadorDeHorarios
+  class ValidadorDeAeronave
+  class ValidadorDeAutonomia
+  class ValidadorDeDisponibilidade
+  class Violacao <<record>> {
+    codigo : CodigoViolacao
+    mensagem : String
+    ordemTrecho : Integer
+  }
+  class ResultadoValidacao <<record>> {
+    valido() : boolean
+  }
+}
+
+' --- rede
+Aerovia --> "origem" Aeroporto
+Aerovia --> "destino" Aeroporto
+
+' --- frota
+Aeronave <|-- Particular
+Aeronave <|-- ComercialPassageiros
+Aeronave <|-- ComercialCarga
+Aeronave ..> RegraOperacao : fornece
+RegraOperacao <|.. RegraParticular
+RegraOperacao <|.. RegraPassageiros
+RegraOperacao <|.. RegraCarga
+
+' --- plano
+PlanoDeVoo --> Piloto
+PlanoDeVoo --> Aeronave
+PlanoDeVoo --> "origem" Aeroporto
+PlanoDeVoo --> "destino" Aeroporto
+PlanoDeVoo --> StatusPlano
+PlanoDeVoo "1" *-- "0..*" Trecho : ordenados
+Trecho --> Aerovia
+Trecho --> AcaoNoAeroporto
+AcaoNoAeroporto <|.. Sobrevoo
+AcaoNoAeroporto <|.. Pouso
+PlanoDeVoo ..> TrechoCalculado : cronograma()
+TrechoCalculado --> Trecho
+TrechoCalculado ..> Intervalo
+
+' --- reserva
+CalculadoraDeSlots ..> Intervalo
+CalculadoraDeSlots ..> Slot : gera
+RegraOperacao ..> Intervalo
+
+' --- validacao
+Validador <|.. ValidadorDePercurso
+Validador <|.. ValidadorDeHorarios
+Validador <|.. ValidadorDeAeronave
+Validador <|.. ValidadorDeAutonomia
+Validador <|.. ValidadorDeDisponibilidade
+ValidadorDePlano o-- "1..*" Validador
+ValidadorDePlano ..> ResultadoValidacao
+ResultadoValidacao o-- "0..*" Violacao
+Validador ..> Violacao
+ValidadorDeDisponibilidade ..> ConsultaDeOcupacao
+ValidadorDeDisponibilidade ..> CalculadoraDeSlots
+ValidadorDeAeronave ..> FaixaDeAltitude
+
+note bottom of ConsultaDeOcupacao
+  Implementada na infraestrutura (banco).
+  Reservas (ReservaAerovia, ReservaVaga) são
+  persistidas por slot, com UNIQUE, e ficam na
+  camada de persistência (próxima etapa).
+end note
+@enduml
