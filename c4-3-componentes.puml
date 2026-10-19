@@ -1,0 +1,61 @@
+@startuml c4-3-componentes
+!include <C4/C4_Component>
+
+title C4 Nível 3: Componentes da API Backend
+
+Person(operador, "Cliente da API", "Ferramenta HTTP")
+ContainerDb(banco, "Banco de dados", "H2 file database", "Rede, frota, planos, reservas")
+
+Container_Boundary(api, "API Backend (Java 21, Spring Boot)") {
+
+    Boundary(camadaApi, "Camada api") {
+        Component(controllers, "Controllers REST", "Spring MVC", "Rede (aeroportos e aerovias), frota (pilotos e aeronaves), planos e disponibilidade. Recebem JSON e coordenam cadastro, consulta e ciclo de vida dos planos.")
+        Component(erros, "Tratamento Global de Erros", "@RestControllerAdvice", "Traduz recursos inexistentes em 404 e erros de regra/entrada em 400.")
+    }
+
+    Boundary(camadaApp, "Serviços e transações") {
+        Component(casosPlano, "Serviço de Registros e API", "Spring MVC + transações", "CRUD de registros, validação HTTP e ciclo de vida de planos.")
+        Component(casosCadastro, "Serviço de Registros", "Spring @Service", "Cadastrar e consultar aeroportos, aerovias, pilotos e aeronaves; consultar disponibilidade.")
+    }
+
+    Boundary(camadaDominio, "Camada domain (Java puro)") {
+        Component(plano, "Plano de Voo", "Agregado", "Estado, trechos e transições (aprovar, cancelar, abandonar). Só planos em edição são modificáveis.")
+        Component(frota, "Frota e Regras de Operação", "Strategy", "Aeronave por categoria, duração do trecho e limite de autonomia; RegraOperacao de cada categoria.")
+        Component(rede, "Rede Aérea", "Value objects", "Aeroporto e Aerovia (imutável).")
+        Component(reservas, "Reservas e Slots", "Value objects + serviço", "Slot, Intervalo e CalculadoraDeSlots.")
+        Component(validacao, "Validação de Plano", "Validação HTTP", "Percurso, horários, categoria, autonomia e disponibilidade.")
+        Component(portas, "Portas de Repositório", "Interfaces", "ConsultaDeOcupacao e repositórios de plano, rede, frota e reservas.")
+    }
+
+    Boundary(camadaInfra, "Camada infrastructure") {
+        Component(adaptadores, "Persistência genérica", "Spring Data JPA + H2", "Armazena cadastros e planos em payload JSON; reservas em tabela própria.")
+        Component(migracoes, "Esquema e Dados Iniciais", "Hibernate DDL + CommandLineRunner", "Esquema, rede inicial, pilotos e frota.")
+        Component(carga, "Carga Inicial de Planos", "CommandLineRunner", "Insere planos e reservas de demonstração na primeira inicialização.")
+        Component(config, "Configuração", "Spring @Configuration", "Clock injetável, data de referência e OpenAPI.")
+    }
+}
+
+Rel(operador, controllers, "Requisições", "HTTP/JSON")
+Rel(controllers, casosPlano, "Chama")
+Rel(controllers, casosCadastro, "Chama")
+Rel(controllers, erros, "Erros tratados por")
+Rel(casosPlano, plano, "Usa")
+Rel(casosPlano, validacao, "Valida com")
+Rel(casosPlano, reservas, "Calcula slots com")
+Rel(casosPlano, portas, "Persiste e reserva via")
+Rel(casosCadastro, rede, "Usa")
+Rel(casosCadastro, frota, "Usa")
+Rel(casosCadastro, portas, "Persiste e consulta via")
+Rel(plano, frota, "Usa")
+Rel(plano, rede, "Usa")
+Rel(validacao, plano, "Lê")
+Rel(validacao, reservas, "Usa")
+Rel(validacao, portas, "Consulta ocupação via")
+Rel(frota, reservas, "Usa Intervalo")
+Rel(adaptadores, portas, "Implementa")
+Rel(adaptadores, banco, "Lê e grava", "JDBC")
+Rel(migracoes, banco, "Cria e popula o esquema", "JDBC")
+Rel(carga, casosPlano, "Aprova planos iniciais por")
+Rel(config, casosPlano, "Fornece Clock a")
+
+@enduml

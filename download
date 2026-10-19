@@ -1,0 +1,10 @@
+target/
+out/
+.idea/
+*.iml
+.DS_Store
+
+# Banco local H2
+data/
+*.mv.db
+*.trace.db
